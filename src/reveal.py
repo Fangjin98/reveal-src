@@ -23,7 +23,6 @@ def min_sum_id(k, knapsack):
 
 def random_pick(knapsack, probabilities):
     x = random.uniform(0, 1)
-    # print(x)
     cumulative_probability = 0.0
     index = -1
     for it, item_probability in zip(knapsack, probabilities):
@@ -31,19 +30,15 @@ def random_pick(knapsack, probabilities):
         if x < cumulative_probability:
             index = knapsack.index(it)
             break
-    # print(index)
     return index
 
 
 def solve_lp1(request_num, _K=kk, _P=pp):
-    # x[i][j]: decision variables determine if VNF j installs in ECN i or not.
-    # y[i][j][k]: decision variables determine if user k acquire VNF j from ECN i or not.
-    # r[i][j][k]: the proportion of traffic amount
-
-    if USERAMOUNT == 1000:
-        filerequest = 30
-    else:
-        filerequest = 50
+    """
+    x[i][j]: decision variables determine if VNF j installs in ECN i or not.
+    y[i][j][k]: decision variables determine if user k acquire VNF j from ECN i or not.
+    r[i][j][k]: the proportion of traffic amount
+    """
 
     x = [
         [
@@ -116,32 +111,48 @@ def solve_lp1(request_num, _K=kk, _P=pp):
         )
     for i in range(ECNAMOUNT):
         prob += pl.lpSum([x[i][j] * p[j] for j in range(VNFAMOUNT)]) <= P[i]
-    for i in range(ECNAMOUNT):
-        for j in range(VNFAMOUNT):
-            prob += pl.lpSum([y[i][j][k] * t[k] for k in range(USERAMOUNT)]) <= p[j]
-    status = prob.solve(pl.get_solver("CPLEX_PY"))
 
+    for j in range(VNFAMOUNT):
+        prob += pl.lpSum([y[i][j][k] * t[k] for k in range(USERAMOUNT)]) <= p[j]
+
+    prob.solve(pl.get_solver("CPLEX_PY"))
     print("objective =", pl.value(prob.objective))
 
-    # f = open(
-    #     "../data/lp1_x_user_" + str(USERAMOUNT) + "_request_" + str(request_num) + "_k_" + str(_K) + "_p_" + str(_P),
-    #     "w")
-    # f.write(str(pl.value(prob.objective)) + '\n')
-    # for i in range(ECNAMOUNT):
-    #     for j in range(VNFAMOUNT):
-    #         f.write(str(pl.value(x[i][j])) + ' ')
-    #     f.write('\n')
-    # f.close()
-    #
-    # f = open(
-    #     "../data/lp1_y_user_" + str(USERAMOUNT) + "_request_" + str(request_num) + "_k_" + str(_K) + "_p_" + str(_P),
-    #     "w")
-    # for i in range(ECNAMOUNT):
-    #     for j in range(VNFAMOUNT):
-    #         for k in range(USERAMOUNT):
-    #             f.write(str(pl.value(y[i][j][k])) + ' ')
-    #         f.write('\n')
-    # f.close()
+    f = open(
+        "../data/lp1_x_user_"
+        + str(USERAMOUNT)
+        + "_request_"
+        + str(request_num)
+        + "_k_"
+        + str(_K)
+        + "_p_"
+        + str(_P),
+        "w",
+    )
+    f.write(str(pl.value(prob.objective)) + "\n")
+    for i in range(ECNAMOUNT):
+        for j in range(VNFAMOUNT):
+            f.write(str(pl.value(x[i][j])) + " ")
+        f.write("\n")
+    f.close()
+
+    f = open(
+        "../data/lp1_y_user_"
+        + str(USERAMOUNT)
+        + "_request_"
+        + str(request_num)
+        + "_k_"
+        + str(_K)
+        + "_p_"
+        + str(_P),
+        "w",
+    )
+    for i in range(ECNAMOUNT):
+        for j in range(VNFAMOUNT):
+            for k in range(USERAMOUNT):
+                f.write(str(pl.value(y[i][j][k])) + " ")
+            f.write("\n")
+    f.close()
 
     xres = [[pl.value(x[i][j]) for j in range(VNFAMOUNT)] for i in range(ECNAMOUNT)]
     yres = [
@@ -188,18 +199,6 @@ def alg1(useramount, t, cost, ecn_capacity, vnf_capacity, x, y, K, P):
         res = random_pick(knapsack[i], probabilityies)
         ecn_id = knapsack_pos[i][0][res]
         vnf_id = knapsack_pos[i][1][res]
-        # flag = False
-        # while vnf_id in set_of_placed_VNF:
-        #     vnf_id = vnf_id + 1
-        #     # flag = True
-        #     if vnf_id >= VNFAMOUNT:
-        #         break
-        # if flag:
-        #     maxcapacity = 0
-        #     for ecn in ecnlist:
-        #         if ecn.get_capacity() > maxcapacity:
-        #             maxcapacity = ecn.get_capacity()
-        #             ecn_id = ecnlist.index(ecn)
         ecnlist[ecn_id].install_vnf(vnf_id, vnf_capacity[vnf_id])
         set_of_placed_VNF.append(vnf_id)
         placement_of_vnf[vnf_id] = ecn_id
@@ -386,69 +385,5 @@ if __name__ == "__main__":
     plist = [[10, 12, 14, 16], [50, 60, 70, 80]]
     klist = [[6, 8, 10, 12], [10, 12, 14, 16]]
 
-    # for num in request_per_user:
-    #     run_alg(20, num, kk, pp)
-
-    f = open("../data/myalg1_withoutrobust_user_" + str(USERAMOUNT), "w")
     for num in request_per_user:
-        placementcost = 0
-        throughput = 0
-        ksum = 0
-        psum = 0
-        for count in range(5):
-            kp = [[0 for j in range(USERAMOUNT)] for i in range(VNFAMOUNT)]
-            tmpthroughput, requestlist = run_alg(1000, num, 10, 50)
-            # placementcost = placementcost + tmpcost
-            throughput = throughput + tmpthroughput
-            for request in requestlist:
-                if request.get_vnf() == -1:
-                    continue
-                kp[request.get_vnf()][request.get_user()] = 1
-            ksum = ksum + max(
-                [sum([kp[i][j] for i in range(VNFAMOUNT)]) for j in range(USERAMOUNT)]
-            )
-            psum = psum + max(
-                [sum([kp[i][j] for j in range(USERAMOUNT)]) for i in range(VNFAMOUNT)]
-            )
-
-        placementcost = int(placementcost / 5)
-        throughput = int(throughput / 5)
-        ksum = int(ksum / 5)
-        psum = int(psum / 5)
-        f.write(str(placementcost) + " " + str(throughput) + "\n")
-        f.write(str(ksum) + " " + str(psum) + "\n")
-    f.close()
-
-    # f = open("../data/myalg_withrobust", 'w')
-    # for num in klist[0]:
-    #     throughput = 0
-    #     for count in range(10):
-    #         tmpthroughput, _ = run_alg(300, 16, num, 10)
-    #         throughput = throughput + tmpthroughput
-    #     throughput = int(throughput / 10)
-    #     f.write(str(throughput) + '\n')
-    #
-    # for num in plist[0]:
-    #     throughput = 0
-    #     for count in range(10):
-    #         tmpthroughput, _ = run_alg(300, 16, 6, num)
-    #         throughput = throughput + tmpthroughput
-    #     throughput = int(throughput / 10)
-    #     f.write(str(throughput) + '\n')
-    #
-    # for num in klist[1]:
-    #     throughput = 0
-    #     for count in range(10):
-    #         tmpthroughput, _ = run_alg(1000, 16, num, 50)
-    #         throughput = throughput + tmpthroughput
-    #     throughput = int(throughput / 10)
-    #     f.write(str(throughput) + '\n')
-    #
-    # for num in plist[1]:
-    #     throughput = 0
-    #     for count in range(10):
-    #         tmpthroughput, _ = run_alg(1000, 16, 10, num)
-    #         throughput = throughput + tmpthroughput
-    #     throughput = int(throughput / 10)
-    #     f.write(str(throughput) + '\n')
-    # f.close()
+        run_alg(20, num, kk, pp)
