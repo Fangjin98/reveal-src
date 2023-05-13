@@ -1,4 +1,6 @@
-# Code of Reveal
+# Reveal Simulation
+
+This repo contains the simulation codes of reveal.
 
 ## Data
 
