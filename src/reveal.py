@@ -76,7 +76,7 @@ def solve_lp1(request_num, _K=kk, _P=pp):
     )
     phi = USER.get_unaccessible_ecn("../data/user_" + str(USERAMOUNT) + "_position")
 
-    prob = pl.LpProblem("VPLA", pl.LpMinimize)
+    prob = pl.LpProblem("RVPA", pl.LpMinimize)
     prob += pl.lpSum(
         [x[i][j] * c[j] for i in range(ECNAMOUNT) for j in range(VNFAMOUNT)]
     )
